@@ -7,6 +7,7 @@ from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.encoding import python_2_unicode_compatible
 
 from .behaviors.models import Permalinkable, Timestampable, Dateframeable
 from .querysets import PostQuerySet, OtherNameQuerySet, ContactDetailQuerySet, MembershipQuerySet, OrganizationQuerySet, PersonQuerySet
@@ -68,7 +69,7 @@ class LinkBase(models.Model):
     class Meta:
         abstract = True
 
-
+@python_2_unicode_compatible
 class OtherNameBase(Dateframeable, models.Model):
     """
     An alternate or former name
@@ -81,7 +82,7 @@ class OtherNameBase(Dateframeable, models.Model):
     class Meta:
         abstract = True
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
@@ -132,6 +133,7 @@ def _generate_common_tables(model, extra_info):
         globals()[class_name] = linked_info_model
 
 
+@python_2_unicode_compatible
 class Person(Dateframeable, Timestampable, Permalinkable, PopoloModel):
     """
     A real person, alive or dead
@@ -166,6 +168,9 @@ class Person(Dateframeable, Timestampable, Permalinkable, PopoloModel):
     def slug_source(self):
         return self.name
 
+    def __str__(self):
+        return self.name
+
     url_name = 'person-detail'
     objects = PassThroughManager.for_queryset_class(PersonQuerySet)()
 
@@ -175,6 +180,7 @@ class Person(Dateframeable, Timestampable, Permalinkable, PopoloModel):
 _generate_common_tables(Person, True)
 
 
+@python_2_unicode_compatible
 class Organization(Dateframeable, Timestampable, Permalinkable, PopoloModel):
     """
     A group with a common purpose or reason for existence that goes beyond the set of people belonging to it
@@ -203,6 +209,9 @@ class Organization(Dateframeable, Timestampable, Permalinkable, PopoloModel):
 
     @property
     def slug_source(self):
+        return self.name
+
+    def __str__(self):
         return self.name
 
     url_name = 'organization-detail'
@@ -270,15 +279,3 @@ class Membership(Dateframeable, Timestampable, PopoloModel):
         abstract = True
 
 _generate_common_tables(Membership, False)
-
-##
-## signals
-##
-
-## all instances are validated before being saved
-@receiver(pre_save, sender=Person)
-@receiver(pre_save, sender=Organization)
-@receiver(pre_save, sender=Post)
-def validate_date_fields(sender, **kwargs):
-    obj = kwargs['instance']
-    obj.full_clean()
